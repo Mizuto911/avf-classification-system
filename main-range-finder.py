@@ -56,6 +56,26 @@ class AVFDetectorApp:
         self.detect_microphone()
         self.load_model()
         self.show_screen("file_scanner")
+
+        stenosis_dir = Path(__file__).parent / "data" / "stenosis"
+        stenosis_dir.mkdir(exist_ok=True)
+        normal_dir = Path(__file__).parent / "data" / "normal"
+        normal_dir.mkdir(exist_ok=True)
+
+        self.stenosis_files = []
+        self.normal_files = []
+        self.stenosis_values = []
+        self.normal_values = []
+
+        try:
+            self.stenosis_files = [f for f in stenosis_dir.iterdir() if f.suffix.lower() in ['.wav', '.mp3']]
+            self.stenosis_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            print(f'\nStenosis:\n{self.stenosis_files}')
+            self.normal_files = [f for f in normal_dir.iterdir() if f.suffix.lower() in ['.wav', '.mp3']]
+            self.normal_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            print(f'\nNormal:\n{self.normal_files}')
+        except Exception as e:
+            print(str(e))
         
     def setup_ui(self):
         """Setup the main UI with sidebar and screen container"""
@@ -120,7 +140,7 @@ class AVFDetectorApp:
         header = tk.Frame(screen, bg='#6b7db5', height=50)
         header.pack(fill='x')
         header.pack_propagate(False)
-        tk.Label(header, text="File Scanning", font=("Helvetica", 16, "bold"),
+        tk.Label(header, text="Range Finder", font=("Helvetica", 16, "bold"),
                  bg='#6b7db5', fg='white').pack(expand=True, pady=10)
         
         content = tk.Frame(screen, bg='white')
@@ -128,51 +148,42 @@ class AVFDetectorApp:
         
         result_container = tk.Frame(content, bg='#bdc3c7', bd=2, relief='solid')
         result_container.pack(fill='x', pady=(0, 20))
-        
-        self.file_result_frame = tk.Frame(result_container, bg='#95a5a6', height=90)
-        self.file_result_frame.pack(fill='x', padx=2, pady=2)
-        self.file_result_frame.pack_propagate(False)
-        
-        tk.Label(self.file_result_frame, text="Analysis Results", font=("Helvetica", 10, "bold"),
-                 bg='#95a5a6', fg='white').pack(pady=(5, 2))
-        
-        self.file_result_label = tk.Label(self.file_result_frame, text="Ready",
-                                          font=("Helvetica", 26, "bold"), bg='#95a5a6', fg='white')
-        self.file_result_label.pack(expand=True, pady=(0, 5))
-        
-        audio_frame = tk.Frame(content, bg='#f8f9fa', bd=1, relief='solid')
-        audio_frame.pack(fill='x', pady=5)
-        self.audio_label = tk.Label(audio_frame, text="Current Audio: No file selected",
-                                    font=("Helvetica", 8), bg='#f8f9fa', fg='#2c3e50',
-                                    anchor='w', padx=8, pady=5)
-        self.audio_label.pack(fill='x')
 
-        values_frame = tk.Frame(content, bg='#f8f9fa', bd=1, relief='solid')
-        values_frame.pack(fill='x', pady=5)
-        self.values_label = tk.Label(values_frame, text='No File Selected. No features to be shown.',
+        self.stenosis_header_frame = tk.Frame(content, relief='solid')
+        self.stenosis_header_frame.pack(fill='x')
+        self.stenosis_header_label = tk.Label(self.stenosis_header_frame, text='STENOSIS',
+                                    font=("Helvetica", 16), justify='left',
+                                    anchor='w', padx=8, pady=5)
+        self.stenosis_header_label.pack(fill='x')
+        stenosis_frame = tk.Frame(content, bg='#f8f9fa', bd=1, relief='solid')
+        stenosis_frame.pack(fill='x', pady=5)
+        self.stenosis_label = tk.Label(stenosis_frame, text='Press analyze to show min and max values.',
                                     font=("Helvetica", 8), bg='#f8f9fa', fg='#2c3e50', justify='left',
                                     anchor='w', padx=8, pady=5)
-        self.values_label.pack(fill='x')
+        self.stenosis_label.pack(fill='x')
+
+        self.normal_header_frame = tk.Frame(content, relief='solid')
+        self.normal_header_frame.pack(fill='x')
+        self.normal_header_label = tk.Label(self.normal_header_frame, text='NORMAL',
+                                    font=("Helvetica", 16), justify='left',
+                                    anchor='w', padx=8, pady=5)
+        self.normal_header_label.pack(fill='x')
+        normal_frame = tk.Frame(content, bg='#f8f9fa', bd=1, relief='solid')
+        normal_frame.pack(fill='x', pady=5)
+        self.normal_label = tk.Label(normal_frame, text='Press analyze to show min and max values.',
+                                    font=("Helvetica", 8), bg='#f8f9fa', fg='#2c3e50', justify='left',
+                                    anchor='w', padx=8, pady=5)
+        self.normal_label.pack(fill='x')
         
         button_frame = tk.Frame(content, bg='white')
         button_frame.pack(fill='x', pady=15)
         
-        tk.Button(button_frame, text="Stenosis", font=("Helvetica", 11, "bold"),
-                  bg='#34495e', fg='white', activebackground='#2c3e50', bd=0,
-                  command=lambda: self.select_audio_file("stenosis"), cursor="hand2", width=14, height=1,
-                  pady=6).pack(side='left', padx=(0, 8))
-        
-        tk.Button(button_frame, text="Normal", font=("Helvetica", 11, "bold"),
-                  bg='#34495e', fg='white', activebackground='#2c3e50', bd=0,
-                  command=lambda: self.select_audio_file("normal"), cursor="hand2", width=14, height=1,
-                  pady=6).pack(side='left', padx=(0, 8))
-        
-        self.analyze_btn = tk.Button(
-            button_frame, text="Start Detection", font=("Helvetica", 11, "bold"),
+        self.analyze_all_btn = tk.Button(
+            button_frame, text="Analyze All Files", font=("Helvetica", 11, "bold"),
             bg='#27ae60', fg='white', activebackground='#229954', bd=0,
             command=self.analyze_file, cursor="hand2", width=14, height=1, pady=6
         )
-        self.analyze_btn.pack(side='right', padx=(8, 0))
+        self.analyze_all_btn.pack(side='right', padx=(8, 0))
         
     def show_screen(self, screen_name):
         if self.current_screen:
@@ -252,71 +263,13 @@ class AVFDetectorApp:
     
     # -- File Scanner ------------------------------------------------------------
 
-    def select_audio_file(self, classification: str):
-        file_dir = Path(__file__).parent / "data" / classification
-        file_dir.mkdir(exist_ok=True)
-        
-        dialog = tk.Toplevel(self.window)
-        dialog.title(f"{classification.capitalize()} List")
-        dialog.geometry("600x500")
-        dialog.configure(bg='white')
-        dialog.transient(self.window)
-        dialog.grab_set()
-        
-        dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - 300
-        y = (dialog.winfo_screenheight() // 2) - 250
-        dialog.geometry(f"600x500+{x}+{y}")
-        
-        tk.Label(dialog, text=f"{classification.capitalize()} List", font=("Helvetica", 16, "bold"),
-                 bg='white', fg='#2c3e50').pack(pady=25)
-        tk.Frame(dialog, bg='#bdc3c7', height=1).pack(fill='x', padx=40)
-        
-        canvas_frame = tk.Frame(dialog, bg='white')
-        canvas_frame.pack(fill='both', expand=True, padx=40, pady=20)
-        
-        canvas = tk.Canvas(canvas_frame, bg='white', highlightthickness=0)
-        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = tk.Frame(canvas, bg='white')
-        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        try:
-            wav_files = [f for f in file_dir.iterdir() if f.suffix.lower() in ['.wav', '.mp3']]
-            wav_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-            if len(wav_files) == 0:
-                tk.Label(scrollable_frame, text="No recordings found", font=("Helvetica", 12),
-                         bg='white', fg='#7f8c8d').pack(pady=50)
-            else:
-                for filepath in wav_files:
-                    file_label = tk.Label(scrollable_frame, text=filepath.name, font=("Helvetica", 12),
-                                          bg='white', fg='#2c3e50', anchor='w', padx=10, pady=12, cursor="hand2")
-                    file_label.pack(fill='x', pady=2)
-                    file_label.bind('<Button-1>', lambda e, f=filepath: self._select_file(f, dialog))
-                    file_label.bind('<Enter>', lambda e, l=file_label: l.config(bg='#ecf0f1'))
-                    file_label.bind('<Leave>', lambda e, l=file_label: l.config(bg='white'))
-        except Exception as e:
-            tk.Label(scrollable_frame, text=f"Error: {str(e)}", font=("Helvetica", 11),
-                     bg='white', fg='#e74c3c').pack(pady=50)
-    
-    def _select_file(self, filepath, dialog):
-        self.selected_file = str(filepath)
-        self.audio_label.config(text=f"Current Audio: {filepath.name}")
-        dialog.destroy()
-    
     def analyze_file(self):
-        if not self.selected_file:
-            messagebox.showwarning("No File", "Please select a recording first")
-            return
         if self.model is None:
             messagebox.showerror("No Model", "Model not loaded")
             return
-        
-        self.file_result_frame.config(bg='#f39c12')
-        self.file_result_label.config(text="Analyzing...", bg='#f39c12')
+        if not self.stenosis_files and not self.normal_files:
+            messagebox.showerror("No Audio", "No Audio Files found")
+            return
         
         analysis_thread = threading.Thread(target=self._run_file_analysis)
         analysis_thread.daemon = True
@@ -324,55 +277,70 @@ class AVFDetectorApp:
     
     def _run_file_analysis(self):
         try:
-            audio, sr = librosa.load(self.selected_file, sr=self.sample_rate)
-            segments = self.create_segments(audio)
-            average_values = {
-                "mfccs_mean": 0,
-                "mfccs_std": 0,
-                "spectral_centroid": 0,
-                "spectral_rolloff": 0,
-                "spectral_bandwidth": 0,
-                "spectral_contrast_mean": 0,
-                "zcr": 0,
-                "rms": 0,
-            }
-            keys = average_values.keys()
-            
-            predictions = []
-            for segment in segments:
-                features = self.extract_features(segment)
-                if features is not None:
-                    features_scaled = self.scaler.transform([features])
-                    prob = self.model.predict_proba(features_scaled)[0, 1]
-                    predictions.append(prob)
+            for file in self.stenosis_files:
+                audio, sr = librosa.load(file, sr=self.sample_rate)
+                segments = self.create_segments(audio)
+                average_values = {
+                    "mfccs_mean": 0,
+                    "mfccs_std": 0,
+                    "spectral_centroid": 0,
+                    "spectral_rolloff": 0,
+                    "spectral_bandwidth": 0,
+                    "spectral_contrast_mean": 0,
+                    "zcr": 0,
+                    "rms": 0,
+                }
+                keys = average_values.keys()
+                for segment in segments:
+                    features = self.extract_features(segment)
+                    if features is not None:
+                        i = 0
+                        for key in keys:
+                            average_values[key] = average_values[key] + features[i]
+                            i = i + 1
+                
+                for key in keys:
+                    average_values[key] = average_values[key] / len(segments)
 
-                    i = 0
-                    for key in keys:
-                        average_values[key] = average_values[key] + features[i]
-                        i = i + 1
+                self.stenosis_values.append(average_values)
+
+            for file in self.normal_files:
+                audio, sr = librosa.load(file, sr=self.sample_rate)
+                segments = self.create_segments(audio)
+                average_values = {
+                    "mfccs_mean": 0,
+                    "mfccs_std": 0,
+                    "spectral_centroid": 0,
+                    "spectral_rolloff": 0,
+                    "spectral_bandwidth": 0,
+                    "spectral_contrast_mean": 0,
+                    "zcr": 0,
+                    "rms": 0,
+                }
+                keys = average_values.keys()
+
+                for segment in segments:
+                    features = self.extract_features(segment)
+                    if features is not None:
+                        i = 0
+                        for key in keys:
+                            average_values[key] = average_values[key] + features[i]
+                            i = i + 1
+                
+                for key in keys:
+                    average_values[key] = average_values[key] / len(segments)
+
+                self.normal_values.append(average_values)
+
+            stenosis_value_range = self.get_min_max(self.stenosis_values)
+            normal_value_range = self.get_min_max(self.normal_values)
+
+            self.window.after(0, lambda: self.stenosis_label.config(text=self.get_min_max_content(stenosis_value_range)))
+            self.window.after(0, lambda: self.normal_label.config(text=self.get_min_max_content(normal_value_range)))
             
-            if len(predictions) == 0:
-                self.window.after(0, lambda: messagebox.showerror("Error", "No valid features extracted"))
-                return
-            
-            for key in keys:
-                average_values[key] = average_values[key] / len(segments)
-            
-            mean_prob = np.mean(predictions)
-            stenosis_threshold = 1.0 - (self.THRESHOLD / 100.0)
-            prediction = 'STENOSIS' if mean_prob > stenosis_threshold else 'NORMAL'
-            self.window.after(0, self._show_file_results, {'prediction': prediction})
-            self.window.after(0, lambda: self.values_label.config(text=self.get_values_string(average_values)))
+
         except Exception as e:
-            self.window.after(0, lambda: messagebox.showerror("Error", f"Analysis failed:\n{str(e)}"))
-    
-    def _show_file_results(self, result):
-        if result['prediction'] == 'STENOSIS':
-            self.file_result_frame.config(bg='#c0392b')
-            self.file_result_label.config(text="STENOSIS", bg='#c0392b')
-        else:
-            self.file_result_frame.config(bg='#27ae60')
-            self.file_result_label.config(text="NORMAL", bg='#27ae60')
+            self.window.after(0, lambda err=e: messagebox.showerror("Error", f"Analysis failed:\n{str(err)}"))
         
         msg_dialog = tk.Toplevel(self.window)
         msg_dialog.title("Analysis Complete")
@@ -402,6 +370,25 @@ class AVFDetectorApp:
         for key in keys:
             values_string = values_string + f'{key}: {values[key]}\n'
         return values_string
+    
+    def get_min_max(self, values: list):
+        keys = values[0].keys()
+        min_max_dict = {}
+        for key in keys:
+            value_list = list(value[key] for value in values)
+            min_max_dict[key] = {
+                'min': min(value_list),
+                'max': max(value_list),
+            }
+        return min_max_dict
+    
+    def get_min_max_content(self, min_max_dict: dict):
+        keys = min_max_dict.keys()
+        min_max_content = ''
+        for key in keys:
+            min_max_content = min_max_content + f'{key}:\n Min - {min_max_dict[key]['min']}\nMax - {min_max_dict[key]['max']}\n'
+        return min_max_content
+
     
     # -- Helpers -----------------------------------------------------------------
 
