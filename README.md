@@ -4,7 +4,7 @@ Hi guys! Ito ang ating system. For now ilalagay ko muna dito kung paano sya gami
 
 ## How to download the code.
 
-1. Punta kayo sa "Code<>" section tapos just press download.
+1. Punta kayo sa **Code<>** section tapos just press download.
 
    ![download](assets/download.png)
 
