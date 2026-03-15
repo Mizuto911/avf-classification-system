@@ -1,0 +1,6 @@
+librosa
+numpy
+joblib
+sounddevice
+soundfile
+matplotlib
