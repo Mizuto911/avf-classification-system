@@ -12,6 +12,8 @@ import sounddevice as sd
 import soundfile as sf
 from datetime import datetime
 import queue
+from PIL import Image, ImageTk
+
 warnings.filterwarnings('ignore')
 
 class AVFDetectorApp:
@@ -100,10 +102,23 @@ class AVFDetectorApp:
         )
         file_btn.pack()
         self.nav_buttons.append(file_btn)
+
+        #Albert changes
+        #Logo above the close button
+        img = Image.open("assets/logo.png")
+        img = img.resize((80,80), Image.LANCZOS)
+        logo = ImageTk.PhotoImage(img) 
+
+        label_logo = tk.Label(self.sidebar, image=logo,
+                              bg="#2c3e50")       
+        label_logo.image = logo
+        label_logo.place(x=30, y=740)
         
+
+
         # Close Application button (bottom)
         shutdown_frame = tk.Frame(self.sidebar, bg='#2c3e50')
-        shutdown_frame.pack(side='bottom', pady=30)
+        shutdown_frame.pack(side='bottom', pady=150)
         shutdown_btn = tk.Button(
             shutdown_frame, text="Close App", font=("Helvetica", 8),
             bg='#2c3e50', fg='white', activebackground='#34495e', bd=0,

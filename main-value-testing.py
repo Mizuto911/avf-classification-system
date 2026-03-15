@@ -321,20 +321,21 @@ class AVFDetectorApp:
         analysis_thread = threading.Thread(target=self._run_file_analysis)
         analysis_thread.daemon = True
         analysis_thread.start()
-    
+
+#Albert changes    
     def _run_file_analysis(self):
         try:
             audio, sr = librosa.load(self.selected_file, sr=self.sample_rate)
             segments = self.create_segments(audio)
             average_values = {
-                "mfccs_mean": 0,
-                "mfccs_std": 0,
-                "spectral_centroid": 0,
-                "spectral_rolloff": 0,
-                "spectral_bandwidth": 0,
-                "spectral_contrast_mean": 0,
-                "zcr": 0,
-                "rms": 0,
+                "Mel-Frequency Cepstral Coefficients": 0, #mfcc_mean
+                "MFCC Standard Deviation": 0, #mfcc_std
+                "Spectral Centroid": 0, #spectral_centroid
+                "Spectral Roll-off": 0, #spectral_rolloff
+                "Spectral Bandwidth": 0, #spectral_bandwidth
+                "Spectral Contrast Mean": 0, #spectral_contrast_mean
+                "Zero Crossing Rate": 0, #zcr
+                "RMS Energy": 0, # rms
             }
             keys = average_values.keys()
             
