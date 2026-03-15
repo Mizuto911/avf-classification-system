@@ -400,7 +400,8 @@ class AVFDetectorApp:
         values_string = ''
         keys = values.keys()
         for key in keys:
-            values_string = values_string + f'{key}: {values[key]}\n'
+#Albert changes
+            values_string = values_string + f'{key}: {values[key]:.2f}\n'
         return values_string
     
     # -- Helpers -----------------------------------------------------------------
@@ -417,8 +418,11 @@ class AVFDetectorApp:
             spectral_contrast_mean = np.mean(spectral_contrast, axis=1)
             zcr = np.mean(librosa.feature.zero_crossing_rate(audio_segment))
             rms = np.mean(librosa.feature.rms(y=audio_segment))
-            return np.concatenate([mfccs_mean, mfccs_std, [spectral_centroid], [spectral_rolloff],
+#Albert changes
+            feature_long_decimal =  np.concatenate([mfccs_mean, mfccs_std, [spectral_centroid], [spectral_rolloff],
                 [spectral_bandwidth], spectral_contrast_mean, [zcr], [rms]]) 
+            
+            return np.round(feature_long_decimal, 2)
            
         except Exception as e:
             print(f"Error extracting features: {e}")
