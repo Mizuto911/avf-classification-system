@@ -339,9 +339,11 @@ class AVFDetectorApp:
             keys = average_values.keys()
             
             predictions = []
+            count = 0
             for segment in segments:
                 features = self.extract_features(segment)
                 if features is not None:
+                    count += 1
                     features_scaled = self.scaler.transform([features])
                     prob = self.model.predict_proba(features_scaled)[0, 1]
                     predictions.append(prob)
@@ -350,6 +352,7 @@ class AVFDetectorApp:
                     for key in keys:
                         average_values[key] = average_values[key] + features[i]
                         i = i + 1
+            print(f'Total feature: {count}')
             
             if len(predictions) == 0:
                 self.window.after(0, lambda: messagebox.showerror("Error", "No valid features extracted"))
@@ -417,6 +420,7 @@ class AVFDetectorApp:
             spectral_contrast_mean = np.mean(spectral_contrast, axis=1)
             zcr = np.mean(librosa.feature.zero_crossing_rate(audio_segment))
             rms = np.mean(librosa.feature.rms(y=audio_segment))
+            print(spectral_centroid)
             return np.concatenate([mfccs_mean, mfccs_std, [spectral_centroid], [spectral_rolloff],
                 [spectral_bandwidth], spectral_contrast_mean, [zcr], [rms]]) 
            
