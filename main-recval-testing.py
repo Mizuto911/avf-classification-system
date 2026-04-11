@@ -11,7 +11,8 @@ import warnings
 import sounddevice as sd
 import soundfile as sf
 from datetime import datetime
-import queue
+import time
+import psutil
 warnings.filterwarnings('ignore')
 
 
@@ -32,12 +33,14 @@ class AVFDetectorApp:
         self.segment_length = 3
         self.hop_length = 2
         self.sample_rate = 22050
+        self.cpu_monitor_interval = 1
         self.selected_file = None
         self.is_recording = False
         self.mic_sample_rate = 44100
         self.mic_device_id = None
         self.recording_duration = 30
         self.is_recording = False
+        self.start_processing_time = None
 
         # UI
         self.screens = {}
@@ -47,6 +50,7 @@ class AVFDetectorApp:
         self.load_model()
         self.detect_microphone()
         self.show_screen("file_scanner")
+        self.show_cpu_percent()
 
     # ================= UI =================
     def setup_ui(self):
@@ -56,6 +60,7 @@ class AVFDetectorApp:
         self.sidebar = tk.Frame(main_container, bg='#2c3e50', width=140)
         self.sidebar.pack(side='left', fill='y')
         self.sidebar.pack_propagate(False)
+
 
         right_container = tk.Frame(main_container, bg='#ecf0f1')
         right_container.pack(side='right', fill='both', expand=True)
@@ -74,6 +79,20 @@ class AVFDetectorApp:
                  font=("Helvetica", 7), bg='#2c3e50', fg='#5f6c7d').pack(side='right', padx=20, pady=5)
 
         self.create_file_scanner_screen()
+        
+        self.cpu_percentage_label = tk.Label(main_container, text='CPU Usage:\n0%', bg='green', fg='white', padx=10, pady=10, font=('Arial', 16, 'bold'), justify=tk.LEFT)
+        self.cpu_percentage_label.place(x=0, y=0)
+
+    def monitor_cpu(self):
+        psutil.cpu_percent(interval=None)
+
+        while True:
+            usage = psutil.cpu_percent(interval=None)
+            self.cpu_percentage_label.config(text=f'CPU Usage:\n{usage}%')
+            time.sleep(self.cpu_monitor_interval)
+
+    def show_cpu_percent(self):
+        threading.Thread(target=self.monitor_cpu, daemon=True).start()
 
     def create_file_scanner_screen(self):
         screen = tk.Frame(self.screen_container, bg='white')
@@ -181,6 +200,8 @@ class AVFDetectorApp:
             sf.write(str(temp_file), self.recording_data, self.mic_sample_rate)
             self.selected_file = str(temp_file)
             self._recording_complete()
+
+            self.start_processing_time = time.perf_counter()
             self.analyze_btn.config(state=tk.DISABLED)
             self.analyze_file()
             self.analyze_btn.config(state=tk.NORMAL)
@@ -270,13 +291,13 @@ class AVFDetectorApp:
             self.window.after(0, lambda: self.file_result_label.config(
                 text=prediction,
                 bg='#c0392b' if prediction == 'STENOSIS' else '#27ae60'))
-            self.window.after(0, lambda: self.audio_label.config(text=self.get_values_string(stats)))
+            self.window.after(0, lambda: self.audio_label.config(text=self.get_values_string(stats, self.start_processing_time, time.perf_counter())))
 
         except Exception as e:
             print(e)
             messagebox.showerror("Error", f"Analysis failed: {e}")
 
-    def get_values_string(self, values: dict):
+    def get_values_string(self, values: dict, start_time: float, end_time: float):
         # Only shows the 4 spectral features on UI
         text = ""
         for key, v in values.items():
@@ -285,6 +306,7 @@ class AVFDetectorApp:
                 f" Mean : {v['mean']:.2f}\n"
                 f" Std  : {v['std']:.2f}\n"
                 f" Range: {v['min']:.2f} - {v['max']:.2f}\n\n"
+                f" Processing Time: {((end_time - start_time)*1000):.2f} ms\n\n"
             )
         return text
 

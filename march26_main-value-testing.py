@@ -120,6 +120,11 @@ class AVFDetectorApp:
                   bg='#34495e', fg='white', activebackground='#2c3e50', bd=0,
                   command=lambda: self.select_audio_file("normal"), cursor="hand2", width=14, height=1,
                   pady=6).pack(side='left', padx=(0, 8))
+        
+        tk.Button(button_frame, text="New Recordings", font=("Helvetica", 11, "bold"),
+                  bg='#34495e', fg='white', activebackground='#2c3e50', bd=0,
+                  command=lambda: self.select_audio_file("AVF_RECORDING"), cursor="hand2", width=14, height=1,
+                  pady=6).pack(side='left', padx=(0, 8))
 
         self.analyze_btn = tk.Button(
             button_frame, text="Start Detection", font=("Helvetica", 11, "bold"),
@@ -136,14 +141,60 @@ class AVFDetectorApp:
 
     # ================= FILE SELECTION =================
     def select_audio_file(self, classification: str):
-        file_dir = Path(__file__).parent / "recordings"
+        file_dir = Path(__file__).parent / "data" / classification
         file_dir.mkdir(exist_ok=True)
-        wav_files = [f for f in file_dir.iterdir() if f.suffix.lower() in ['.wav', '.mp3']]
-        if not wav_files:
-            messagebox.showerror("No files", f"No {classification} files found")
-            return
-        self.selected_file = str(wav_files[-1])
-        self.audio_label.config(text=f"Current Audio: {wav_files[-1].name}")
+        
+        dialog = tk.Toplevel(self.window)
+        dialog.title(f"{classification.capitalize()} List")
+        dialog.geometry("600x500")
+        dialog.configure(bg='white')
+        dialog.transient(self.window)
+        dialog.grab_set()
+        
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - 300
+        y = (dialog.winfo_screenheight() // 2) - 250
+        dialog.geometry(f"600x500+{x}+{y}")
+        
+        tk.Label(dialog, text=f"{classification.capitalize()} List", font=("Helvetica", 16, "bold"),
+                 bg='white', fg='#2c3e50').pack(pady=25)
+        tk.Frame(dialog, bg='#bdc3c7', height=1).pack(fill='x', padx=40)
+        
+        canvas_frame = tk.Frame(dialog, bg='white')
+        canvas_frame.pack(fill='both', expand=True, padx=40, pady=20)
+        
+        canvas = tk.Canvas(canvas_frame, bg='white', highlightthickness=0)
+        scrollbar = tk.Scrollbar(canvas_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='white')
+        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        try:
+            wav_files = [f for f in file_dir.iterdir() if f.suffix.lower() in ['.wav', '.mp3']]
+            wav_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            if len(wav_files) == 0:
+                tk.Label(scrollable_frame, text="No recordings found", font=("Helvetica", 12),
+                         bg='white', fg='#7f8c8d').pack(pady=50)
+            else:
+                for filepath in wav_files:
+                    file_label = tk.Label(scrollable_frame, text=filepath.name, font=("Helvetica", 12),
+                                          bg='white', fg='#2c3e50', anchor='w', padx=10, pady=12, cursor="hand2")
+                    file_label.pack(fill='x', pady=2)
+                    file_label.bind('<Button-1>', lambda e, f=filepath: self._select_file(f, dialog))
+                    file_label.bind('<Enter>', lambda e, l=file_label: l.config(bg='#ecf0f1'))
+                    file_label.bind('<Leave>', lambda e, l=file_label: l.config(bg='white'))
+        except Exception as e:
+            tk.Label(scrollable_frame, text=f"Error: {str(e)}", font=("Helvetica", 11),
+                     bg='white', fg='#e74c3c').pack(pady=50)
+            
+
+    def _select_file(self, filepath, dialog):
+        self.selected_file = str(filepath)
+        self.audio_label.config(text=f"Current Audio: {filepath.name}")
+        dialog.destroy()
 
     # ================= ANALYSIS =================
     def analyze_file(self):

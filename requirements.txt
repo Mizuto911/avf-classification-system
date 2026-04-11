@@ -4,3 +4,4 @@ joblib
 sounddevice
 soundfile
 matplotlib
+psutil
