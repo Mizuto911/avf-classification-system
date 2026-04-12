@@ -253,6 +253,7 @@ class AVFDetectorApp:
         output.update({
                 'Peak-CPU Usage': cp,
                 'Processing Time': proc_time,
+                'Prediction': prediction,
             })
         
         self.output.append(output)
