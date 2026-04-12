@@ -1312,7 +1312,7 @@ class StenosisTester:
     def select_file(self):
         """Open file dialog with card-based layout for easy touch selection"""
         # Create recordings directory if it doesn't exist
-        recordings_dir = Path(__file__).parent / "recordings"
+        recordings_dir = Path(__file__).parent / "data" / "AVF_RECORDING"
         recordings_dir.mkdir(exist_ok=True)
         
         # Create custom file dialog window
